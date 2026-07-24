@@ -80,6 +80,22 @@ function animate() {
 }
 animate();
 
+function showEmojiPopup(keyEl, emoji) {
+  if (!emoji) return;
+  const r = keyEl.getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = 'emoji-popup';
+  el.textContent = emoji;
+  el.style.left = (r.left + r.width / 2) + 'px';
+  el.style.top = (r.top - 12) + 'px';
+  document.body.appendChild(el);
+  requestAnimationFrame(() => {
+    el.style.transform = 'translate(-50%, -40px)';
+    el.style.opacity = '0';
+  });
+  setTimeout(() => el.remove(), 550);
+}
+
 let audioCtx = null;
 function initAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -91,9 +107,10 @@ let currentBC = null;
 let signaling = null;
 let mesh = null;
 
-function trigger(midiNote, broadcast = true, remoteWaveType = null) {
+function trigger(midiNote, broadcast = true, remoteWaveType = null, remoteEmoji = null) {
   initAudio();
   const wave = remoteWaveType || settings.waveType;
+  const playerEmoji = broadcast ? myEmoji : remoteEmoji;
   const finalNote = midiNote + (settings.octaveOffset * 12);
   const freq = 440 * Math.pow(2, (finalNote - 69) / 12);
 
@@ -123,10 +140,11 @@ function trigger(midiNote, broadcast = true, remoteWaveType = null) {
       const r = keyEl.getBoundingClientRect();
       trails.push(new NoteTrail(r.left, r.width, noteColors[finalNote % 12]));
     }
+    showEmojiPopup(keyEl, playerEmoji);
   }
 
   if (broadcast) {
-    const data = { m: midiNote, w: settings.waveType };
+    const data = { m: midiNote, w: settings.waveType, e: myEmoji };
     if (currentBC) currentBC.postMessage(data);
     if (mesh) mesh.broadcast(data);
   }
@@ -250,13 +268,13 @@ connectBtn.onclick = async () => {
 
   // BroadcastChannel: continua funcionando para abas do mesmo navegador na mesma sala
   currentBC = new BroadcastChannel(`piano-${roomId}`);
-  currentBC.onmessage = (e) => trigger(e.data.m, false, e.data.w);
+  currentBC.onmessage = (e) => trigger(e.data.m, false, e.data.w, e.data.e);
 
   try {
     signaling = new SignalingClient();
     mesh = new PeerMesh(signaling);
 
-    mesh.addEventListener('note', (e) => trigger(e.detail.m, false, e.detail.w));
+    mesh.addEventListener('note', (e) => trigger(e.detail.m, false, e.detail.w, e.detail.e));
     signaling.addEventListener('message', (e) => {
       if (e.detail.type === 'user-list') {
         updateUsersUI(e.detail.users.filter((u) => u.id !== signaling.id));

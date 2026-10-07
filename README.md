@@ -7,6 +7,7 @@ O **Piano Compartilhado - Sistema P2P** permite que múltiplos usuários toquem 
 ## 🚀 Funcionalidades Principais
 
 - **Multi-User Real-time**: Sistema de salas privadas para tocar com amigos em tempo real. As notas trafegam direto entre os navegadores via **WebRTC (DataChannel)**; um pequeno servidor Node.js cuida só da parte de apresentação entre os peers (quem está na sala, troca de offer/answer/ICE). Abas do mesmo navegador também sincronizam via **BroadcastChannel**.
+- **Controle Remoto (QR Code)**: na TV/PC aparece o botão **Controle Remoto**, que mostra um QR Code com um código de 10 caracteres. Ao escanear com o celular/tablet (ou digitar o código em **Conectar com Código**), o aparelho vira um controle: tem um piano em tela cheia e as notas tocam na TV/PC, com som, rastro e o emoji de quem tocou. A TV/PC mostra **Pessoas na Sala: X** no canto superior direito. As notas vão por WebRTC direto (baixa latência) e, se o canal direto não abrir, caem automaticamente pelo servidor.
 - **Audio Engine Dinâmica**: Osciladores nativos com suporte a 4 formas de onda (Sine, Square, Sawtooth, Triangle).
 - **Visualizer Trails**: Sistema de partículas que gera rastros de cores baseados na nota tocada.
 - **Customização Total**: Ajuste de oitava (com feedback sonoro), volume, sustain e efeitos visuais.
@@ -22,7 +23,7 @@ Este projeto foi desenvolvido com foco total na privacidade e segurança, alinha
 
 - **Sem Coleta de Dados**: O servidor não grava nomes, e-mails, IPs ou qualquer informação pessoal em disco ou banco de dados — tudo existe só em memória, enquanto a sala está ativa, e some quando o usuário desconecta.
 - **Ambiente Seguro**: Sem chat de texto ou troca de arquivos, eliminando riscos de assédio ou exposição a conteúdo impróprio.
-- **Áudio sempre Peer-to-Peer**: O som das notas nunca passa pelo servidor — vai direto de um navegador para o outro via WebRTC. O servidor participa apenas do "aperto de mão" inicial entre os peers (sinalização), de forma efêmera e sem persistência.
+- **Áudio sempre Peer-to-Peer**: O som das notas nunca passa pelo servidor — vai direto de um navegador para o outro via WebRTC. O servidor participa apenas do "aperto de mão" inicial entre os peers (sinalização), de forma efêmera e sem persistência. (No Controle Remoto, só como plano B se a conexão direta falhar, o servidor repassa o número da nota tocada — nada é gravado.)
 - **Identidade Animal**: Uso de Emojis aleatórios para manter o anonimato de forma lúdica e segura.
 
 ## 📂 Como Hospedar

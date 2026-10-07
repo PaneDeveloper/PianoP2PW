@@ -3,12 +3,15 @@ const http = require('http');
 const path = require('path');
 const { WebSocketServer, WebSocket } = require('ws');
 const { randomUUID } = require('crypto');
+const { createRemoteHandler, startHeartbeat } = require('./remote');
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
 const PORT = process.env.PORT || 3000;
+
+startHeartbeat(wss);
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
@@ -33,6 +36,7 @@ function broadcastUserList(roomId) {
 wss.on('connection', (ws) => {
   const peerId = randomUUID();
   let currentRoom = null;
+  const remoteCtl = createRemoteHandler(ws, peerId); // Controle Remoto (QR Code)
 
   ws.on('message', (raw) => {
     let msg;
@@ -41,6 +45,9 @@ wss.on('connection', (ws) => {
     } catch {
       return; // ignora mensagens mal formadas
     }
+
+    if (!msg || typeof msg !== 'object') return;
+    if (remoteCtl.handle(msg)) return; // mensagens "remote-*" são do Controle Remoto
 
     if (msg.type === 'join') {
       const roomId = String(msg.room || '').toUpperCase().slice(0, 8);
@@ -77,6 +84,7 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
+    remoteCtl.leave();
     if (!currentRoom) return;
     const room = getRoom(currentRoom);
     room.delete(peerId);

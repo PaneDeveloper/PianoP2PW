@@ -1,4 +1,5 @@
 import { SignalingClient, PeerMesh } from './webrtc.js';
+import { initRemoteUI } from './remote-ui.js';
 
 // --- Registro do Service Worker ---
 if ('serviceWorker' in navigator) {
@@ -106,27 +107,33 @@ function initAudio() {
 let currentBC = null;
 let signaling = null;
 let mesh = null;
+let remote = null; // Controle Remoto (QR Code) - iniciado no fim do arquivo
 
 function trigger(midiNote, broadcast = true, remoteWaveType = null, remoteEmoji = null) {
-  initAudio();
+  // celular/tablet conectado como Controle Remoto: só mostra a tecla e manda a nota (quem toca é a TV/PC)
+  const asController = broadcast && remote?.isController();
   const wave = remoteWaveType || settings.waveType;
-  const playerEmoji = broadcast ? myEmoji : remoteEmoji;
+  const playerEmoji = broadcast ? (asController ? remote.emoji() : myEmoji) : remoteEmoji;
   const finalNote = midiNote + (settings.octaveOffset * 12);
-  const freq = 440 * Math.pow(2, (finalNote - 69) / 12);
 
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = wave;
-  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  if (!asController) {
+    initAudio();
+    const freq = 440 * Math.pow(2, (finalNote - 69) / 12);
 
-  gain.gain.setValueAtTime(0, audioCtx.currentTime);
-  gain.gain.linearRampToValueAtTime(settings.volume * 0.2, audioCtx.currentTime + 0.01);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + settings.sustain);
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = wave;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
 
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime + settings.sustain + 0.1);
+    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(settings.volume * 0.2, audioCtx.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + settings.sustain);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + settings.sustain + 0.1);
+  }
 
   const keyEl = document.querySelector(`[data-midi="${midiNote}"]`);
   if (keyEl) {
@@ -136,11 +143,16 @@ function trigger(midiNote, broadcast = true, remoteWaveType = null, remoteEmoji 
       keyEl.classList.remove('active');
       keyEl.style.color = '';
     }, 150);
-    if (settings.showTrails) {
+    if (settings.showTrails && !asController) {
       const r = keyEl.getBoundingClientRect();
       trails.push(new NoteTrail(r.left, r.width, noteColors[finalNote % 12]));
     }
     showEmojiPopup(keyEl, playerEmoji);
+  }
+
+  if (asController) {
+    remote.sendNote(midiNote);
+    return;
   }
 
   if (broadcast) {
@@ -199,23 +211,27 @@ document.getElementById('octave-up').onclick = () => {
 
 window.addEventListener('mousedown', () => isInteractionActive = true);
 window.addEventListener('mouseup', () => { isInteractionActive = false; lastTriggeredMidi = null; });
-window.addEventListener('touchstart', (e) => { isInteractionActive = true; handlePointer(e); }, { passive: false });
-window.addEventListener('touchend', () => { isInteractionActive = false; lastTriggeredMidi = null; });
-window.addEventListener('touchmove', handlePointer, { passive: false });
+// Toque: cada dedo é tratado separado (dá pra tocar acordes e deslizar com vários dedos)
+const touchLastMidi = new Map(); // id do toque -> última tecla tocada por esse dedo
 
-function handlePointer(e) {
-  if (!isInteractionActive) return;
-  const x = e.touches ? e.touches[0].clientX : e.clientX;
-  const y = e.touches ? e.touches[0].clientY : e.clientY;
-  const el = document.elementFromPoint(x, y)?.closest('.key');
-  if (el) {
+function handleTouches(e) {
+  for (const t of e.changedTouches) {
+    const el = document.elementFromPoint(t.clientX, t.clientY)?.closest('.key');
+    if (!el) { touchLastMidi.delete(t.identifier); continue; }
+    if (e.cancelable) e.preventDefault(); // evita o "mousedown" fantasma que o navegador dispara depois do toque (nota dobrada)
     const midi = parseInt(el.dataset.midi);
-    if (midi !== lastTriggeredMidi) {
+    if (midi !== touchLastMidi.get(t.identifier)) {
       trigger(midi);
-      lastTriggeredMidi = midi;
+      touchLastMidi.set(t.identifier, midi);
     }
   }
 }
+const endTouches = (e) => { for (const t of e.changedTouches) touchLastMidi.delete(t.identifier); };
+
+window.addEventListener('touchstart', handleTouches, { passive: false });
+window.addEventListener('touchmove', handleTouches, { passive: false });
+window.addEventListener('touchend', endTouches);
+window.addEventListener('touchcancel', endTouches);
 
 const pianoContainer = document.getElementById('piano');
 function drawKeys() {
@@ -292,3 +308,16 @@ connectBtn.onclick = async () => {
     connectBtn.disabled = false;
   }
 };
+
+// --- Controle Remoto (QR Code): TV/PC mostra o QR e toca; celular/tablet vira controle ---
+remote = initRemoteUI({
+  myEmoji,
+  unlockAudio: initAudio,
+  onNote: (m, emoji) => {
+    trigger(m, false, null, emoji); // toca aqui: som + rastro + emoji de quem apertou
+    // se esta tela também está numa sala P2P / outras abas, repassa a nota pra elas
+    const data = { m, w: settings.waveType, e: emoji };
+    if (currentBC) currentBC.postMessage(data);
+    if (mesh) mesh.broadcast(data);
+  },
+});

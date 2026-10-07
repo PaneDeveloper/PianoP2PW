@@ -1,10 +1,13 @@
-const CACHE_NAME = 'piano-p2p-v2';
+const CACHE_NAME = 'piano-p2p-v3';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './js/app.js',
   './js/webrtc.js',
+  './js/remote.js',
+  './js/remote-ui.js',
+  './js/vendor/qrcode.js',
   'https://cdn.tailwindcss.com',
 ];
 

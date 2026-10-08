@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Piano Compartilhado - Sistema P2P</title>
+    <title>Piano Compartilhado</title>
     
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
@@ -497,7 +497,7 @@
 <div id="modal-overlay"></div>
 <div id="settings-modal">
     <div class="modal-header">
-        <h2 class="text-sm font-bold uppercase tracking-widest text-gray-400">Definições</h2>
+        <h2 class="text-sm font-bold uppercase tracking-widest text-gray-400">Configs.</h2>
         <button id="close-settings" class="text-gray-500 hover:text-white text-2xl">&times;</button>
     </div>
     <div class="modal-body space-y-6">
@@ -548,10 +548,10 @@
         </button>
     </div>
     <div id="remote-qr-card">
-        <h3>Escaneie com o celular</h3>
+        <h3>Escaneie com o celular ou tablet</h3>
         <div id="remote-qr"></div>
         <div id="remote-code"></div>
-        <p id="remote-hint">ou toque em <b>Conectar com Código</b> no celular e digite o código acima</p>
+        <p id="remote-hint">ou toque em <b>Conectar com Código</b> no celular ou tablet e digite o código acima</p>
         <button id="remote-end" type="button">Encerrar sala</button>
     </div>
 </div>
@@ -569,7 +569,7 @@
         <button id="remote-join-close" class="text-gray-500 hover:text-white text-2xl" type="button">&times;</button>
     </div>
     <div class="modal-body">
-        <p class="text-xs text-gray-400 mb-3">Digite o código que aparece na tela da TV/PC (ou escaneie o QR Code com a câmera).</p>
+        <p class="text-xs text-gray-400 mb-3">Digite o código que aparece na tela do dispositivo (ou escaneie o QR Code com a câmera).</p>
         <input type="text" id="remote-code-input" maxlength="12" placeholder="CÓDIGO" autocomplete="off" autocapitalize="characters" spellcheck="false">
         <div id="remote-join-msg"></div>
         <button class="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-bold transition-all text-xs uppercase tracking-widest mt-3" id="remote-join-go" type="button">Entrar na sala</button>
